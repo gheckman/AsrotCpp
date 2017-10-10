@@ -180,7 +180,7 @@ struct BIG
     double T;
 };
 
-// Increase ISTP size from 6 to 7 for nuill terminated C-style strings
+// Increase ISTP size from 6 to 7 for null terminated C-style strings
 char ISTP[LENIST][7] = 
 {
     "A    =", "B    =", "C    =", " DJ  =", " DJK =",
@@ -196,7 +196,7 @@ char ISTP[LENIST][7] =
 
 char BLUFF[6];
 
-// Increase ISTPS size from 6 to 7 for nuill terminated C-style strings
+// Increase ISTPS size from 6 to 7 for null terminated C-style strings
 char ISTPS[NCONST][7] = 
 {
     "A    =", "B    =", "C    =", " DJ  =", " DJK =",
