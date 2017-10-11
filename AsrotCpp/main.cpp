@@ -1,8 +1,12 @@
+#include <cmath>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <string>
 
-// v0.1.0 Direct translation
+// v0.1.0 Direct translation (attempting to keep the code mostly the same at this point for 
+//        ease of testing/general comparison. Some control structures may change, but variable 
+//        names, etc. should be fairly similar.)
 
 /* Original Header
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -140,23 +144,20 @@ C   gfortran/Linux:  gfortran -fno-automatic -O2 asrot.for -o asrot
 C_____________________________________________________________________________
 */
 
+// really awful pause function just so the console doesn't die on me while testing
 void pause()
 {
     char x;
+    std::cout << "PAUSED - ENTER ANY CHARACTER TO CONTINUE: ";
     std::cin >> x;
 }
-
-// Any variable from now on in the range [A-H,O-Z] will be a double unless otherwise stated
-// Any variable from now on in the range [I-N] will be a (signed) short unless otherwise stated
-
-// FORTRAN style matrices and C style matrices are transposed relative to each other
 
 constexpr int NCONST = 35;
 constexpr int MAXJ = 35;
 constexpr int MAXDIM = MAXJ / 2 + 1;
 constexpr int LENIST = NCONST + 3;
 
-struct ASRO
+struct asro_t
 {
     double FMIN, FMAX;
     double A[NCONST];
@@ -168,17 +169,17 @@ struct ASRO
     double R;
     double ID[MAXDIM];
     short I, J, L, NT, IP;
-};
+} ASRO;
 
-struct DEF
+struct def_t
 {
     short NREC;
-};
+} DEF;
 
-struct BIG
+struct big_t
 {
     double T;
-};
+} BIG;
 
 // Increase ISTP size from 6 to 7 for null terminated C-style strings
 char ISTP[LENIST][7] = 
@@ -229,27 +230,37 @@ float GI = 1;
 float HALFW = 20;
 float ABUND = 1;
 float TEMP;
-char COMENT[72];
+// string for getline
+std::string COMENT;
 char LINE[79];
 char NAMRED[2] = {'A', 'S'};
 int NREC, NT;
 
+// Not gonna even try with FORTRAN'S FORMAT specifier. Just wing it
+// todo [6] don't do ... whatever this is, use strings please
+char separator[] = " ------------------------------------------------------------------------------";
+char prediction_of[] = "  PREDICTION OF ASYMMETRIC TOP TRANSITION FREQUENCIES AND/OR ENERGY LEVELS";
+char watsons_reduced[] = "  (Watson's reduced Hamiltonian, reduction ?, representation I)";
+char pretty_stars[] = "                                      * * * * * ";
+
+constexpr short REDUCTION_REPLACEMENT_INDEX = 43;
+
 int main(int argc, char** argv)
 {
-    // Starting from 181: there seems to be like... 25 lines of FORTRAN code that do nothing
+    // Starting from 181: error and other formatting code for about 25 lines
 
     // I can't make heads or tails of FORTRAN's weird formatting rules  
     // so I'm winging it here based on output from the executable
 
     std::cout
-        << "                                                                           " << '\n'
-        << "                                                                           " << '\n'
-        << "                                                                           " << '\n'
-        << " _________________________________________________________________________ " << '\n'
-        << "|  ASROT - PREDICTION OF ASYMMETRIC TOP ROTATIONAL ENERGIES AND SPECTRUM  |" << '\n'
-        << "|          (reduction A or S, all terms up to decadic)                    |" << '\n'
-        << "|_________________________________________________________________________|" << '\n'
-        << " version C++ v0.1.0                                        Zbigniew KISIEL " << '\n'
+        << "                                                                           \n"
+        << "                                                                           \n"
+        << "                                                                           \n"
+        << " _________________________________________________________________________ \n"
+        << "|  ASROT - PREDICTION OF ASYMMETRIC TOP ROTATIONAL ENERGIES AND SPECTRUM  |\n"
+        << "|          (reduction A or S, all terms up to decadic)                    |\n"
+        << "|_________________________________________________________________________|\n"
+        << " C++ v0.1.0 based on 2.VI.2015 by                          Zbigniew KISIEL \n"
         << std::endl;
 
     std::cout << "FILE NAME TO BE USED FOR OUTPUT: ";
@@ -258,14 +269,90 @@ int main(int argc, char** argv)
 
     std::ofstream output_file(FILNAM, std::ios_base::out);
 
-    std::cout
+    // todo [3] create error handling function FORTRAN code seems to handle bad input data well
+    //          get the value, flush the input buffer, validate... all that good stuff
+
+    do
+    {
+        std::cout
+            << '\n'
+            << "PRINTOUT CONTROL:       +-1 = Frequencies only\n"
+            << "                        +-2 = Frequencies and energy levels\n"
+            << "                        +-3 = Energy levels only\n"
+            << '\n'
+            << "Positive values=reduction 'A' negative=reduction 'S' .... ";
+
+        std::cin >> ASRO.IP;
+    } while (ASRO.IP < -3 || ASRO.IP > 3 || ASRO.IP == 0);
+    std::cout << std::endl;
+
+    short IRED = 0;
+    if (ASRO.IP < 0)
+    {
+        IRED = 1;
+        ASRO.IP = ::abs(ASRO.IP);
+        // todo [5] gross, replace the stncpy asap
+        for (int i = 0; i < NCONST; ++i)
+            strncpy(ISTP[i], ISTPS[i], 7);
+    }
+
+    // since I keep getting lost, I'm at approx line 245
+    std::cout << "   JMIN =  ";
+    short JMIN;
+    std::cin >> JMIN;
+
+    std::cout << "  JRMAX =  ";
+    short JRMAX;
+    std::cin >> JRMAX;
+
+    std::cout << "  JQMAX =  ";
+    short JQMAX;
+    std::cin >> JQMAX;
+
+    std::cout << "K-1.MAX =  ";
+    short KMMAX;
+    std::cin >> KMMAX;
+
+    short IS;
+    do
+    {
+        std::cout << "\nLINES TO BE SORTED (1=YES, 0=NO) ?  ";
+        std::cin >> IS;
+    } while(IS != 0 && IS != 1);
+
+    short ISON = 0;
+    if (ASRO.IP == 1 && IS == 1)
+    {
+        do
+        {
+            std::cout << "\nARE UNSORTED FREQUENCIES TO BE DISCARDED ?  ";
+            std::cin >> ISON;
+        } while (ISON != 0 && ISON != 1);
+    }
+
+    std::cout << "\nCOMMENT :" << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::getline(std::cin, COMENT);
+    if (COMENT.size() >= 72)
+        COMENT.erase(72);
+
+    // replace the character with the correct reduction
+    watsons_reduced[REDUCTION_REPLACEMENT_INDEX] = NAMRED[IRED];
+
+    output_file
+        << separator << '\n'
+        << ' ' << COMENT << '\n'
+        << separator << '\n'
+        << prediction_of << '\n'
+        << watsons_reduced << '\n'
         << '\n'
-        << "PRINTOUT CONTROL:       +-1 = Frequencies only" << '\n'
-        << "                        +-2 = Frequencies and energy levels" << '\n'
-        << "                        +-3 = Energy levels only" << '\n'
+        << pretty_stars << '\n'
         << '\n'
-        << "Positive values=reduction 'A' negative=reduction 'S' ...." << '\n'
+        << '\n'
         << std::endl;
+
+    // now I'm at line 278
     
     pause();
+    output_file.close();
 }
