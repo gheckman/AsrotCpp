@@ -1,12 +1,6 @@
-#include <cmath>
-#include <fstream>
-#include <iostream>
-#include <limits>
-#include <string>
-
-// v0.1.0 Direct translation (attempting to keep the code mostly the same at this point for 
-//        ease of testing/general comparison. Some control structures may change, but variable 
-//        names, etc. should be fairly similar.)
+// v0.1.xxx Direct translation (attempting to keep the code mostly the same at this point for 
+//          ease of testing/general comparison. Some control structures may change, but variable 
+//          names, etc. should be fairly similar.)
 
 /* Original Header
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -144,6 +138,14 @@ C   gfortran/Linux:  gfortran -fno-automatic -O2 asrot.for -o asrot
 C_____________________________________________________________________________
 */
 
+#include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <string>
+
 // really awful pause function just so the console doesn't die on me while testing
 void pause()
 {
@@ -245,14 +247,27 @@ char pretty_stars[] = "                                      * * * * * ";
 
 constexpr short REDUCTION_REPLACEMENT_INDEX = 43;
 
+constexpr char version[] = "0.1.003";
+
 int main(int argc, char** argv)
 {
+    using std::cin;
+    using std::cout;
+    using std::endl;
+
     // Starting from 181: error and other formatting code for about 25 lines
 
     // I can't make heads or tails of FORTRAN's weird formatting rules  
     // so I'm winging it here based on output from the executable
 
-    std::cout
+    std::string header_version = " C++ v";
+    header_version += version;
+    header_version += " based on 2.VI.2015 by";
+
+    unsigned char spacing_amount = 72 - 13 - header_version.size();
+    std::string spacing = std::string(spacing_amount, ' ');
+
+    cout
         << "                                                                           \n"
         << "                                                                           \n"
         << "                                                                           \n"
@@ -260,12 +275,12 @@ int main(int argc, char** argv)
         << "|  ASROT - PREDICTION OF ASYMMETRIC TOP ROTATIONAL ENERGIES AND SPECTRUM  |\n"
         << "|          (reduction A or S, all terms up to decadic)                    |\n"
         << "|_________________________________________________________________________|\n"
-        << " C++ v0.1.0 based on 2.VI.2015 by                          Zbigniew KISIEL \n"
-        << std::endl;
+        << header_version << spacing <<                               "Zbigniew KISIEL \n"
+        << endl;
 
-    std::cout << "FILE NAME TO BE USED FOR OUTPUT: ";
+    cout << "FILE NAME TO BE USED FOR OUTPUT: ";
 
-    std::cin >> FILNAM;
+    cin >> FILNAM;
 
     std::ofstream output_file(FILNAM, std::ios_base::out);
 
@@ -274,7 +289,7 @@ int main(int argc, char** argv)
 
     do
     {
-        std::cout
+        cout
             << '\n'
             << "PRINTOUT CONTROL:       +-1 = Frequencies only\n"
             << "                        +-2 = Frequencies and energy levels\n"
@@ -282,9 +297,9 @@ int main(int argc, char** argv)
             << '\n'
             << "Positive values=reduction 'A' negative=reduction 'S' .... ";
 
-        std::cin >> ASRO.IP;
+        cin >> ASRO.IP;
     } while (ASRO.IP < -3 || ASRO.IP > 3 || ASRO.IP == 0);
-    std::cout << std::endl;
+    cout << endl;
 
     short IRED = 0;
     if (ASRO.IP < 0)
@@ -296,28 +311,27 @@ int main(int argc, char** argv)
             strncpy(ISTP[i], ISTPS[i], 7);
     }
 
-    // since I keep getting lost, I'm at approx line 245
-    std::cout << "   JMIN =  ";
+    cout << "   JMIN =  ";
     short JMIN;
-    std::cin >> JMIN;
+    cin >> JMIN;
 
-    std::cout << "  JRMAX =  ";
+    cout << "  JRMAX =  ";
     short JRMAX;
-    std::cin >> JRMAX;
+    cin >> JRMAX;
 
-    std::cout << "  JQMAX =  ";
+    cout << "  JQMAX =  ";
     short JQMAX;
-    std::cin >> JQMAX;
+    cin >> JQMAX;
 
-    std::cout << "K-1.MAX =  ";
+    cout << "K-1.MAX =  ";
     short KMMAX;
-    std::cin >> KMMAX;
+    cin >> KMMAX;
 
     short IS;
     do
     {
-        std::cout << "\nLINES TO BE SORTED (1=YES, 0=NO) ?  ";
-        std::cin >> IS;
+        cout << '\n' << "LINES TO BE SORTED (1=YES, 0=NO) ?  ";
+        cin >> IS;
     } while(IS != 0 && IS != 1);
 
     short ISON = 0;
@@ -325,14 +339,14 @@ int main(int argc, char** argv)
     {
         do
         {
-            std::cout << "\nARE UNSORTED FREQUENCIES TO BE DISCARDED ?  ";
-            std::cin >> ISON;
+            cout << '\n' << "ARE UNSORTED FREQUENCIES TO BE DISCARDED ?  ";
+            cin >> ISON;
         } while (ISON != 0 && ISON != 1);
     }
 
-    std::cout << "\nCOMMENT :" << std::endl;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::getline(std::cin, COMENT);
+    cout << '\n' << "COMMENT :" << endl;
+    cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::getline(cin, COMENT);
     if (COMENT.size() >= 72)
         COMENT.erase(72);
 
@@ -349,9 +363,59 @@ int main(int argc, char** argv)
         << pretty_stars << '\n'
         << '\n'
         << '\n'
-        << std::endl;
+        << endl;
 
-    // now I'm at line 278
+    cout << "\nARE ROTATIONAL CONSTANTS AVAILABLE ON DISK ?  ";
+    cin >> ASRO.I;
+
+    short NCON;
+    if (ASRO.I == 1)
+    {
+        // not sure how to read in constants, save for later.
+
+        cout << '\n' << "NAME OF FILE CONTAINING ROTATIONAL CONSTANTS :  ";
+        cin >> FILROT;
+        // READ(LINE,6866,ERR=2950) BLUFF,NCON
+        // FORMAT(A7,I5)
+    }
+
+    cout << '\n' << "Order of Hamiltonian (eg. 2, 4, 6 etc.) =  ";
+    int IORDER;
+    cin >> IORDER;
+    // ensure IORDER is within bounds (assuming 0 is not an option). 2 <= IORDER <= 10
+    IORDER = std::max(2, std::min(IORDER, 10));
+    // fudge IORDER to make the constant calculation easier. Division by 2 truncates (i.e. 6 and 7 both yield 3), which means no need to test for odds.
+    IORDER = IORDER / 2 + 1;
+
+    // Hamiltonian order - number of constants
+    // 2 - 3
+    // 4 - 8
+    // 6 - 15
+    // 8 - 24
+    // 10 - 35
+
+    NCON = IORDER * IORDER - 1;
+
+    cout << '\n' << "ROTATIONAL AND CENTRIFUGAL DISTORTION CONSTANTS /MHz :" << '\n' << endl;
+
+    // Going rogue again. Curse you FORMAT
+
+    for (int i = 0; i < NCON; ++i)
+    {
+        cout << std::setw(25) << ISTP[i];
+        // todo [2] when input as an int or in e notation, divide by 10^12. Why though? Find more edge cases...
+        cin >> ASRO.A[i];
+    }
+
+    cout << '\n' << "CALCULATION WILL BE CARRIED OUT WITH FOLLOWING CONSTANTS:" << '\n' << endl;
+
+    for (int i = 0; i < NCON; ++i)
+    {
+        // todo [3] line up decimal points in output, always show 19 decimals places of precision (like 12345.00...00 <- 19 zeros)
+        cout << std::setw(36) << ISTP[i] << ASRO.A[i] << endl;
+    }
+
+    // line 342
     
     pause();
     output_file.close();
