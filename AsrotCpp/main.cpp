@@ -166,7 +166,8 @@ struct asro_t
     double EA, EB, EE, EPS;
     double D[3];
     double E[MAXDIM][8];
-    double H[MAXDIM][MAXDIM];
+    // saves on init later. Will probably make this a matrix class at some point.
+    double H[MAXDIM][MAXDIM] = {0};
     double V[MAXDIM];
     double R;
     double ID[MAXDIM];
@@ -239,7 +240,6 @@ char NAMRED[2] = {'A', 'S'};
 int NREC, NT;
 
 // Not gonna even try with FORTRAN'S FORMAT specifier. Just wing it
-// todo [6] don't do ... whatever this is, use strings please
 char separator[] = " ------------------------------------------------------------------------------";
 char prediction_of[] = "  PREDICTION OF ASYMMETRIC TOP TRANSITION FREQUENCIES AND/OR ENERGY LEVELS";
 char watsons_reduced[] = "  (Watson's reduced Hamiltonian, reduction ?, representation I)";
@@ -247,7 +247,7 @@ char pretty_stars[] = "                                      * * * * * ";
 
 constexpr short REDUCTION_REPLACEMENT_INDEX = 43;
 
-constexpr char version[] = "0.1.003";
+constexpr char VERSION[] = "0.1.004";
 
 int main(int argc, char** argv)
 {
@@ -261,11 +261,8 @@ int main(int argc, char** argv)
     // so I'm winging it here based on output from the executable
 
     std::string header_version = " C++ v";
-    header_version += version;
+    header_version += VERSION;
     header_version += " based on 2.VI.2015 by";
-
-    unsigned char spacing_amount = 72 - 13 - header_version.size();
-    std::string spacing = std::string(spacing_amount, ' ');
 
     cout
         << "                                                                           \n"
@@ -275,7 +272,7 @@ int main(int argc, char** argv)
         << "|  ASROT - PREDICTION OF ASYMMETRIC TOP ROTATIONAL ENERGIES AND SPECTRUM  |\n"
         << "|          (reduction A or S, all terms up to decadic)                    |\n"
         << "|_________________________________________________________________________|\n"
-        << header_version << spacing <<                               "Zbigniew KISIEL \n"
+        << std::left << std::setw(59) << header_version << std::right << "Zbigniew KISIEL \n"
         << endl;
 
     cout << "FILE NAME TO BE USED FOR OUTPUT: ";
@@ -306,10 +303,11 @@ int main(int argc, char** argv)
     {
         IRED = 1;
         ASRO.IP = ::abs(ASRO.IP);
-        // todo [5] gross, replace the stncpy asap
         for (int i = 0; i < NCONST; ++i)
             strncpy(ISTP[i], ISTPS[i], 7);
     }
+
+    // line 245
 
     cout << "   JMIN =  ";
     short JMIN;
@@ -365,6 +363,8 @@ int main(int argc, char** argv)
         << '\n'
         << endl;
 
+    // line 278
+
     cout << "\nARE ROTATIONAL CONSTANTS AVAILABLE ON DISK ?  ";
     cin >> ASRO.I;
 
@@ -372,11 +372,10 @@ int main(int argc, char** argv)
     if (ASRO.I == 1)
     {
         // not sure how to read in constants, save for later.
+        cout << '\n' << "Reading constants from files is not yet supported." << endl;
 
-        cout << '\n' << "NAME OF FILE CONTAINING ROTATIONAL CONSTANTS :  ";
-        cin >> FILROT;
-        // READ(LINE,6866,ERR=2950) BLUFF,NCON
-        // FORMAT(A7,I5)
+        //cout << '\n' << "NAME OF FILE CONTAINING ROTATIONAL CONSTANTS :  ";
+        //cin >> FILROT;
     }
 
     cout << '\n' << "Order of Hamiltonian (eg. 2, 4, 6 etc.) =  ";
@@ -415,8 +414,73 @@ int main(int argc, char** argv)
         cout << std::setw(36) << ISTP[i] << ASRO.A[i] << endl;
     }
 
-    // line 342
-    
+    if (ASRO.IP != 3)
+    {
+        cout << '\n' << "DIPOLE MOMENT COMPONENTS /D :" << endl;
+        for (int i = 0; i < 3; ++i)
+        {
+            cout << '\n' << ISTP[NCONST + i];
+            cin >> ASRO.D[i];
+        }
+        cout << '\n' << "     CUTOFF LINE STRENGTH =  ";
+        cin >> ASRO.EPS;
+        cout << '\n' << "ROTATIONAL TEMPERATURE /K =  ";
+        cin >> TEMP;
+        cout << '\n' << " LOW FREQUENCY LIMIT /MHz =  ";
+        cin >> ASRO.FMIN;
+        cout << '\n' << "HIGH FREQUENCY LIMIT /MHz =  ";
+        cin >> ASRO.FMAX;
+    }
+
+    // line 367
+
+    JMIN = ::abs(JMIN);
+    JRMAX = std::min(::abs(JRMAX), MAXJ);
+    JQMAX = std::min(::abs(JQMAX), MAXJ);
+    JMIN = ::abs(JMIN);
+    short JMAX = std::max(JRMAX, JQMAX);
+    if (KMMAX == 0)
+        KMMAX = JMAX;
+
+    short K = 1;
+    if (JMIN > JMAX)
+    { /* todo [1] error */}
+
+    K = 2;
+    if (ASRO.A[0] < ASRO.A[1] || ASRO.A[1] < ASRO.A[2])
+    { /* todo [1] error */ }
+
+    if (ASRO.IP == 3)
+    {
+        cout << NAMRED[IRED];
+    }
+    else
+    {
+        ASRO.EPS = ::abs(ASRO.EPS);
+        ASRO.FMIN = ::abs(ASRO.FMIN);
+        ASRO.FMAX = ::abs(ASRO.FMAX);
+
+        K = 4;
+
+        if (ASRO.FMAX < ASRO.FMIN)
+        { /* todo [1] error */
+        }
+
+        double RJR = 0;
+        double RJQ = 0;
+
+        for (int i = 1; i <= 3; ++i)
+        {
+            RJR *= 16;
+            RJQ *= 4;
+            if (ASRO.D[3-i] == 0) continue;
+            RJR += 15;
+            RJQ += 12288;
+        }
+    }
+
+    // line 394
+
     pause();
     output_file.close();
 }
