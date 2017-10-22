@@ -1,6 +1,6 @@
-// v0.1.xxx Direct translation (attempting to keep the code mostly the same at this point for 
+// v0.1.xxx Direct translation - Attempting to keep the code mostly the same at this point for 
 //          ease of testing/general comparison. Some control structures may change, but variable 
-//          names, etc. should be fairly similar.)
+//          names, etc. should be fairly similar.
 
 /* Original Header
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -146,6 +146,10 @@ C_____________________________________________________________________________
 #include <limits>
 #include <string>
 
+void ASROHA(short NCON);
+void ASROHS();
+void DIPTRA(double DIDUTY[], double RJS, short ISON, short KMMAX, bool& iexit);
+
 // really awful pause function just so the console doesn't die on me while testing
 void pause()
 {
@@ -216,7 +220,7 @@ char ISTPS[NCONST][7] =
 char FILNAM[30];
 char FILROT[30];
 
-double DIDUTY[18] = 
+double DIDUTY[] = 
 {
     402657856, 421828864, 402953920,
     422122624, 151267392, 136652417, 270574336,
@@ -239,28 +243,25 @@ char LINE[79];
 char NAMRED[2] = {'A', 'S'};
 int NREC, NT;
 
-// Not gonna even try with FORTRAN'S FORMAT specifier. Just wing it
-char separator[] = " ------------------------------------------------------------------------------";
-char prediction_of[] = "  PREDICTION OF ASYMMETRIC TOP TRANSITION FREQUENCIES AND/OR ENERGY LEVELS";
-char watsons_reduced[] = "  (Watson's reduced Hamiltonian, reduction ?, representation I)";
-char pretty_stars[] = "                                      * * * * * ";
+const std::string SEPARATOR = std::string(78, '-');
+const std::string PREDICTION_OF = "  PREDICTION OF ASYMMETRIC TOP TRANSITION FREQUENCIES AND/OR ENERGY LEVELS";
+std::string watsons_reduced = "  (Watson's reduced Hamiltonian, reduction ?, representation I)";
+const std::string PRETTY_STARS = "* * * * *";
 
 constexpr short REDUCTION_REPLACEMENT_INDEX = 43;
 
-constexpr char VERSION[] = "0.1.004";
+constexpr char VERSION[] = "0.1.005";
 
 int main(int argc, char** argv)
 {
-    using std::cin;
-    using std::cout;
-    using std::endl;
+    using namespace std;
 
     // Starting from 181: error and other formatting code for about 25 lines
 
     // I can't make heads or tails of FORTRAN's weird formatting rules  
     // so I'm winging it here based on output from the executable
 
-    std::string header_version = " C++ v";
+    string header_version = " C++ v";
     header_version += VERSION;
     header_version += " based on 2.VI.2015 by";
 
@@ -272,14 +273,14 @@ int main(int argc, char** argv)
         << "|  ASROT - PREDICTION OF ASYMMETRIC TOP ROTATIONAL ENERGIES AND SPECTRUM  |\n"
         << "|          (reduction A or S, all terms up to decadic)                    |\n"
         << "|_________________________________________________________________________|\n"
-        << std::left << std::setw(59) << header_version << std::right << "Zbigniew KISIEL \n"
+        << left << setw(59) << header_version << right << "Zbigniew KISIEL \n"
         << endl;
 
     cout << "FILE NAME TO BE USED FOR OUTPUT: ";
 
     cin >> FILNAM;
 
-    std::ofstream output_file(FILNAM, std::ios_base::out);
+    ofstream output_file(FILNAM, ios_base::out);
 
     // todo [3] create error handling function FORTRAN code seems to handle bad input data well
     //          get the value, flush the input buffer, validate... all that good stuff
@@ -343,8 +344,8 @@ int main(int argc, char** argv)
     }
 
     cout << '\n' << "COMMENT :" << endl;
-    cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::getline(cin, COMENT);
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    getline(cin, COMENT);
     if (COMENT.size() >= 72)
         COMENT.erase(72);
 
@@ -352,13 +353,13 @@ int main(int argc, char** argv)
     watsons_reduced[REDUCTION_REPLACEMENT_INDEX] = NAMRED[IRED];
 
     output_file
-        << separator << '\n'
+        << ' ' << SEPARATOR << '\n'
         << ' ' << COMENT << '\n'
-        << separator << '\n'
-        << prediction_of << '\n'
+        << ' ' << SEPARATOR << '\n'
+        << PREDICTION_OF << '\n'
         << watsons_reduced << '\n'
         << '\n'
-        << pretty_stars << '\n'
+        << setw(47) << PRETTY_STARS << '\n'
         << '\n'
         << '\n'
         << endl;
@@ -382,7 +383,7 @@ int main(int argc, char** argv)
     int IORDER;
     cin >> IORDER;
     // ensure IORDER is within bounds (assuming 0 is not an option). 2 <= IORDER <= 10
-    IORDER = std::max(2, std::min(IORDER, 10));
+    IORDER = max(2, min(IORDER, 10));
     // fudge IORDER to make the constant calculation easier. Division by 2 truncates (i.e. 6 and 7 both yield 3), which means no need to test for odds.
     IORDER = IORDER / 2 + 1;
 
@@ -401,17 +402,18 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < NCON; ++i)
     {
-        cout << std::setw(25) << ISTP[i];
+        cout << setw(25) << ISTP[i];
         // todo [2] when input as an int or in e notation, divide by 10^12. Why though? Find more edge cases...
         cin >> ASRO.A[i];
     }
 
     cout << '\n' << "CALCULATION WILL BE CARRIED OUT WITH FOLLOWING CONSTANTS:" << '\n' << endl;
 
+    cout << fixed << setprecision(19);
     for (int i = 0; i < NCON; ++i)
     {
         // todo [3] line up decimal points in output, always show 19 decimals places of precision (like 12345.00...00 <- 19 zeros)
-        cout << std::setw(36) << ISTP[i] << ASRO.A[i] << endl;
+        cout << setw(36) << ISTP[i] << setw(36) << ASRO.A[i] << endl;
     }
 
     if (ASRO.IP != 3)
@@ -432,13 +434,25 @@ int main(int argc, char** argv)
         cin >> ASRO.FMAX;
     }
 
+    output_file
+        << "\n\n"
+        << fixed << setprecision(19)
+        << setw(36) << ISTP[0] << setw(30) << ASRO.A[0] << '\n'
+        << setw(36) << ISTP[1] << setw(30) << ASRO.A[1] << '\n'
+        << setw(36) << ISTP[2] << setw(30) << ASRO.A[2] << '\n'
+        << '\n'
+        << setw(36) << ISTP[35] << setw(30) << ASRO.D[0] << '\n'
+        << setw(36) << ISTP[36] << setw(30) << ASRO.D[1] << '\n'
+        << setw(36) << ISTP[37] << setw(30) << ASRO.D[2] << '\n'
+        << endl;
+
     // line 367
 
     JMIN = ::abs(JMIN);
-    JRMAX = std::min(::abs(JRMAX), MAXJ);
-    JQMAX = std::min(::abs(JQMAX), MAXJ);
+    JRMAX = min(::abs(JRMAX), MAXJ);
+    JQMAX = min(::abs(JQMAX), MAXJ);
     JMIN = ::abs(JMIN);
-    short JMAX = std::max(JRMAX, JQMAX);
+    short JMAX = max(JRMAX, JQMAX);
     if (KMMAX == 0)
         KMMAX = JMAX;
 
@@ -449,6 +463,9 @@ int main(int argc, char** argv)
     K = 2;
     if (ASRO.A[0] < ASRO.A[1] || ASRO.A[1] < ASRO.A[2])
     { /* todo [1] error */ }
+
+    double RJR = 0;
+    double RJQ = 0;
 
     if (ASRO.IP == 3)
     {
@@ -463,11 +480,7 @@ int main(int argc, char** argv)
         K = 4;
 
         if (ASRO.FMAX < ASRO.FMIN)
-        { /* todo [1] error */
-        }
-
-        double RJR = 0;
-        double RJQ = 0;
+        { /* todo [1] error */ }
 
         for (int i = 1; i <= 3; ++i)
         {
@@ -479,8 +492,67 @@ int main(int argc, char** argv)
         }
     }
 
-    // line 394
+    // line 400
+
+    cout << "***** CALCULATION IN PROGRESS, NOW WORKING ON J =  " << endl;
+
+    short JQMIN = JMIN;
+    if (JQMAX <= JMIN)
+    {
+        JQMAX = 0;
+        JQMIN = 0;
+    }
+
+    output_file
+        << fixed << setprecision(1)
+        << "J limits for P&R-type: " << setw(3) << JMIN << " - " << setw(3) << JMAX << "     "
+        << setprecision(6)
+        << "Frequency limits:  " << setw(9) << ASRO.FMIN << " - " << setw(9) << ASRO.FMAX << '\n'
+        << "J limits for Q-type:   " << setw(3) << JQMIN << " - " << setw(3) << JQMAX << "     "
+        << "Line strength cutoff: " << setw(11) << ASRO.EPS << '\n'
+        << "K-1 limits:              0 - " << setw(3) << KMMAX << "     "
+        << "Alpha cutoff:            1x10-12" << endl;
+
+    for (short J = JMIN; J <= JMAX; ++J)
+    {
+        cout << setw(4) << J;
+        ASRO.L = 15;
+        if (IRED != 1)
+            ASROHA(NCON);
+        else
+            ASROHS();
+        if (ASRO.IP >= 1)
+        {
+        }
+        double RJS = 1e-6;
+
+        if (J != JMIN && J <= JRMAX)
+            RJS += RJR;
+
+        if (J <= JQMAX)
+            RJS += RJQ;
+
+        bool iexit = false;
+        DIPTRA(DIDUTY, RJS, ISON, KMMAX, iexit);
+    }
+
+    output_file.close();
 
     pause();
-    output_file.close();
+    return EXIT_SUCCESS;
+}
+
+void ASROHA(short NCON)
+{
+
+}
+
+void ASROHS()
+{
+
+}
+
+void DIPTRA(double DIDUTY[], double RJS, short ISON, short KMMAX, bool& iexit)
+{
+
 }
